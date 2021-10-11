@@ -7,4 +7,4 @@
 - shape of embeddings: `torch.Size([256, 128])` (N, embedding_size)
 - shape of labels: `torch.Size([256])` (N)
 
-TODO: visualization
+visualization は test 関数をいじればできる.

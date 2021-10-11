@@ -10,6 +10,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 import numpy as np
 
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -30,6 +31,7 @@ class Net(nn.Module):
         x = self.fc1(x)
         return x
 
+
 def train(model, loss_func, device, train_loader, optimizer, epoch):
     model.train()
 
@@ -47,9 +49,11 @@ def train(model, loss_func, device, train_loader, optimizer, epoch):
             print(f"shape of labels: {labels.shape}")
             print(f"Epoch {epoch} Iteration {batch_idx}: Loss = {loss}")
 
+
 def get_all_embeddings(dataset, model):
     tester = testers.BaseTester()
     return tester.get_all_embeddings(dataset, model)
+
 
 def test(train_set, test_set, model, accuracy_calculator):
     train_embeddings, train_labels = get_all_embeddings(train_set, model)
@@ -57,12 +61,19 @@ def test(train_set, test_set, model, accuracy_calculator):
     train_labels = train_labels.squeeze(1)
     test_labels = test_labels.squeeze(1)
     print("Computing accuracy")
+
+    # 第2引数は retrieve される最近傍の方、第1引数はクエリ
     accuracies = accuracy_calculator.get_accuracy(test_embeddings, 
                                                 train_embeddings,
                                                 test_labels,
                                                 train_labels,
                                                 False)
     print(f"Test set accuracy (Precision@1) = {accuracies['precision_at_1']}")
+
+    print(test_labels)
+    print(test_labels.shape)
+    print(test_embeddings)
+    print(test_embeddings.shape)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
