@@ -36,6 +36,7 @@ def train(model, loss_func, device, train_loader, optimizer, epoch):
     model.train()
 
     for batch_idx, (data, labels) in enumerate(train_loader):
+        print(data, labels)
         data, labels = data.to(device), labels.to(device)
         optimizer.zero_grad()
         embeddings = model(data)
@@ -64,16 +65,11 @@ def test(train_set, test_set, model, accuracy_calculator):
 
     # 第2引数は retrieve される最近傍の方、第1引数はクエリ
     accuracies = accuracy_calculator.get_accuracy(test_embeddings, 
-                                                train_embeddings,
+                                                test_embeddings,
                                                 test_labels,
-                                                train_labels,
-                                                False)
+                                                test_labels,
+                                                embeddings_come_from_same_source=True)
     print(f"Test set accuracy (Precision@1) = {accuracies['precision_at_1']}")
-
-    print(test_labels)
-    print(test_labels.shape)
-    print(test_embeddings)
-    print(test_embeddings.shape)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -87,6 +83,12 @@ batch_size = 256
 
 dataset1 = datasets.MNIST('.', train=True, download=True, transform=transform)
 dataset2 = datasets.MNIST('.', train=False, transform=transform)
+
+for batch_idx, (data, labels) in enumerate(dataset1):
+    if batch_idx == 0:
+        print(data)
+        print(labels)
+
 train_loader = torch.utils.data.DataLoader(dataset1, batch_size=256, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset2, batch_size=256)
 
