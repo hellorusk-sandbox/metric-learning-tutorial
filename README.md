@@ -11,3 +11,5 @@ visualization は test 関数をいじればできる.
 
 TODO: parallel GPU を止める方法は？
 TODO: グラフの凡例の付け方.
+
+MNIST では tripletmarginloss によってうまく分離ができるようになっている. 一方で, trasnformers の例ではうまくいかない. ライブラリの問題？

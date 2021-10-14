@@ -2,6 +2,9 @@ from pytorch_metric_learning import losses, testers
 from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
 
 
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from sklearn.manifold import TSNE
 from torchvision import datasets
 import torch
 import torch.nn as nn
@@ -36,7 +39,6 @@ def train(model, loss_func, device, train_loader, optimizer, epoch):
     model.train()
 
     for batch_idx, (data, labels) in enumerate(train_loader):
-        print(data, labels)
         data, labels = data.to(device), labels.to(device)
         optimizer.zero_grad()
         embeddings = model(data)
@@ -56,7 +58,7 @@ def get_all_embeddings(dataset, model):
     return tester.get_all_embeddings(dataset, model)
 
 
-def test(train_set, test_set, model, accuracy_calculator):
+def test(train_set, test_set, model, accuracy_calculator, epoch):
     train_embeddings, train_labels = get_all_embeddings(train_set, model)
     test_embeddings, test_labels = get_all_embeddings(test_set, model)
     train_labels = train_labels.squeeze(1)
@@ -71,6 +73,16 @@ def test(train_set, test_set, model, accuracy_calculator):
                                                 embeddings_come_from_same_source=True)
     print(f"Test set accuracy (Precision@1) = {accuracies['precision_at_1']}")
 
+    train_embeddings_reduced = TSNE(n_components=2, random_state=0).fit_transform(train_embeddings.cpu())
+    plt.figure(figsize=(8, 8))
+    plt.scatter(train_embeddings_reduced[:, 0], train_embeddings_reduced[:, 1], c=train_labels.cpu(), cmap=cm.tab10)
+    plt.savefig(f"{__file__}_epoch{epoch}_train.png")
+
+    test_embeddings_reduced = TSNE(n_components=2, random_state=0).fit_transform(test_embeddings.cpu())
+    plt.figure(figsize=(8, 8))
+    plt.scatter(test_embeddings_reduced[:, 0], test_embeddings_reduced[:, 1], c=test_labels.cpu(), cmap=cm.tab10)
+    plt.savefig(f"{__file__}_epoch{epoch}_test.png")
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -84,11 +96,6 @@ batch_size = 256
 dataset1 = datasets.MNIST('.', train=True, download=True, transform=transform)
 dataset2 = datasets.MNIST('.', train=False, transform=transform)
 
-for batch_idx, (data, labels) in enumerate(dataset1):
-    if batch_idx == 0:
-        print(data)
-        print(labels)
-
 train_loader = torch.utils.data.DataLoader(dataset1, batch_size=256, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset2, batch_size=256)
 
@@ -99,7 +106,8 @@ num_epochs = 1
 loss_func = losses.TripletMarginLoss(margin = 0.05)
 accuracy_calculator = AccuracyCalculator(include = ("precision_at_1",), k = 1)
 
+test(dataset1, dataset2, model, accuracy_calculator, epoch=0)
 
 for epoch in range(1, num_epochs+1):
     train(model, loss_func, device, train_loader, optimizer, epoch)
-    test(dataset1, dataset2, model, accuracy_calculator)
+    test(dataset1, dataset2, model, accuracy_calculator, epoch)
