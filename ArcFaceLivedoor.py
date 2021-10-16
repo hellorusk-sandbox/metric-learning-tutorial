@@ -39,20 +39,18 @@ class TextDataset(Dataset):
 
 
 class BertEncoder(torch.nn.Module):
-    def __init__(self, bert_model, max_token_length=768):
+    def __init__(self, bert_model):
         super(BertEncoder, self).__init__()
 
         self.bert_model = bert_model
-        self.fc = torch.nn.Linear(max_token_length, 128)
 
     def forward(self, token_ids, segment_ids, attention_mask):
         output_bert = self.bert_model(
             token_ids, segment_ids, attention_mask
         )
 
-        x = output_bert["last_hidden_state"][:, 0, :] # [CLS] embeddings
-        x = self.fc(x)
-        return x
+        embeddings = output_bert["last_hidden_state"][:, 0, :] # [CLS] embeddings
+        return embeddings
 
 
 class BertEncoderModule(torch.nn.Module):
@@ -88,19 +86,21 @@ class BertEncoderModule(torch.nn.Module):
         return embeddings
 
 
-def train(model, loss_func, device, train_loader, optimizer, epoch):
+def train(model, loss_func, device, train_loader, optimizer, loss_optimizer, epoch):
     model.train()
 
     for batch_idx, (data, labels) in enumerate(train_loader):
         data, labels = data.to(device), labels.to(device)
         optimizer.zero_grad()
+        loss_optimizer.zero_grad()
         embeddings = model(data)
         loss = loss_func(embeddings, labels)
         loss.backward()
         optimizer.step()
+        loss_optimizer.step()
 
         if batch_idx % 20 == 0:
-            print(f"Epoch {epoch} Iteration {batch_idx}: Loss = {loss}")
+            print(f"Epoch {epoch} Iteration {batch_idx}: Loss = {loss}, Number of mined triplets = {mining_func.num_triplets}")
 
 
 def test(train_set, test_set, model, accuracy_calculator, epoch):
@@ -151,10 +151,10 @@ def make_datasets(model_name, max_length=512):
 if __name__ == '__main__':
     batch_size = 128
     lr = 0.01
-    margin = 0.05
+    margin = 1
     num_epochs = 10
     model_name = "cl-tohoku/bert-base-japanese-whole-word-masking"
-    max_length = 512
+    max_length = 128
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -181,12 +181,14 @@ if __name__ == '__main__':
     model = BertEncoderModule(model_name=model_name)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
-    loss_func = losses.TripletMarginLoss(margin = margin)
+    distance = distances.LpDistance(normalize_embeddings=False)
+    loss_func = losses.ArcFaceLoss(num_classes=9, embedding_size=max_length).to(device)
+    loss_optimizer = torch.optim.SGD(loss_func.parameters(), lr=lr)
     accuracy_calculator = AccuracyCalculator(include = ("precision_at_1",), k = 1)
 
 
     test(train_dataset, test_dataset, model, accuracy_calculator, epoch=0)
 
     for epoch in range(1, num_epochs+1):
-        train(model, loss_func, device, train_loader, optimizer, epoch)
+        train(model, loss_func, device, train_loader, optimizer, loss_optimizer, epoch)
         test(train_dataset, test_dataset, model, accuracy_calculator, epoch)

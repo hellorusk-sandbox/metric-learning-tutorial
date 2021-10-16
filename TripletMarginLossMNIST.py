@@ -99,6 +99,22 @@ dataset2 = datasets.MNIST('.', train=False, transform=transform)
 train_loader = torch.utils.data.DataLoader(dataset1, batch_size=256, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset2, batch_size=256)
 
+# check data
+for batch_idx, (data, labels) in enumerate(train_loader):
+    if batch_idx == 0:
+        print(data.shape)
+        print(data)
+        print(labels.shape)
+        print(labels)
+
+for batch_idx, (data, labels) in enumerate(test_loader):
+    if batch_idx == 0:
+        print(data.shape)
+        print(data)
+        print(labels.shape)
+        print(labels)
+
+
 model = Net().to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 num_epochs = 1
